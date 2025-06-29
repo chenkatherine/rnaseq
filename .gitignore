@@ -1,2 +1,8 @@
-!.gitignore
-!*.R
+# Ignore directories
+BAM_DIRECTORY/
+PROCODING_COUNT_MATRICES/
+# Ignore file types
+*.csv
+*.xlsx
+*.png
+*.gtf
