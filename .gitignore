@@ -8,3 +8,6 @@ archive/
 *.png
 *.gtf
 *.docx
+# Ignore files
+.DS_Store
+.Rhistory
