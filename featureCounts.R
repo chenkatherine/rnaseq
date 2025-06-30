@@ -1,4 +1,4 @@
-#' Generates count matrices from .bam files
+#' Generates count matrices from a specified directory of BAM files
 
 #' Load libraries
 #' "Rsubread" for featureCounts
