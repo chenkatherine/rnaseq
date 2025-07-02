@@ -14,6 +14,7 @@ library(ggfortify)
 library(limma)
 library(RUVSeq)
 
+#' Set up project ===
 #' Creates vector with genes of interest for project specific analyses
 genes_of_interest <- c("ENSG00000248098.12", # branched chain keto acid dehydrogenase E1 
                        "ENSG00000112592.15", # TATA-box binding protein
@@ -37,7 +38,7 @@ housekeeping_genes <- c("ENSG00000248098.12", "ENSG00000112592.15")
 counts <- read.csv("procode_counts.csv")
 annotations <- read.csv("annotations.csv")
 
-#' Removes headers to equalize column count and row count
+#' Removes headers to equalize column count and row count ===
 gene_ids <- counts[, 1]
 counts_matrix <- as.matrix(counts[, -1])
 rownames(counts_matrix) <- gene_ids
@@ -45,36 +46,30 @@ rownames(counts_matrix) <- gene_ids
 rownames(annotations) <- annotations$sample
 annotations_sub <- annotations[, c("sample", "condition")]
 
-#' Performs normalization with RUVSeq using the specified housekeeping genes
+#' Performs normalization with RUVSeq using the specified housekeeping genes ===
+#' Commented out since DESeq internally handles that
 #' Extracts the normalized counts for DESeq
-seq <- newSeqExpressionSet(counts = counts_matrix, 
-                           phenoData = AnnotatedDataFrame(data = annotations_sub))
+# seq <- newSeqExpressionSet(counts = counts_matrix, 
+                           # phenoData = AnnotatedDataFrame(data = annotations_sub))
 
-set <- RUVg(x = seq, 
-            cIdx = housekeeping_genes, 
-            k=1)
+# set <- RUVg(x = seq, 
+            # cIdx = housekeeping_genes, 
+            # k=1)
 
-normalized_counts <- assayData(set)$normalizedCounts
+# normalized_counts <- assayData(set)$normalizedCounts
 
-#' Creates DESeqDataSet and runs DESeq2
+#' Creates DESeqDataSet and runs DESeq2 ===
 #' Saves output to xlsx
-dds <- DESeqDataSetFromMatrix(countData = normalized_counts,
+dds <- DESeqDataSetFromMatrix(countData = counts_matrix,
                               colData = annotations,
                               design = ~ batch + condition)
 dds <- DESeq(dds, minReplicatesForReplace = Inf)
 res <- results(dds, cooksCutoff = FALSE, independentFiltering = TRUE)
-write.xlsx(as.data.frame(res), "deseq_t500_procode_ruv.xlsx")
+# write.xlsx(as.data.frame(res), "file_name.xlsx")
 
-# Graphs PCA with normalized and batch-removed data
-# Note: DESeq2 vignette suggests using removeBatchEffect only for visualization
-# since ~ batch + condition param in dds already fixes that issue
-vsd <- vst(dds, blind = FALSE)
-vsd_corrected <- removeBatchEffect(assay(vsd), batch = annotations$batch)
-pca <- prcomp(t(vsd_corrected))
-autoplot(pca, data = annotations, color = "condition", label = TRUE)
 
-#' Employs biomaRt to retrieve gene symbols and descriptions from Ensembl
-#' Saves scraping result to xlsx for local matching
+#' Employs biomaRt to retrieve gene symbols and descriptions from Ensembl ===
+#' Saves scraping result to xlsx for local matching; one-time occurence
 library(biomaRt)
 ensembl = useEnsembl(biomart="ensembl", dataset="hsapiens_gene_ensembl")
 attributes <- c("ensembl_gene_id", "hgnc_symbol", "description")
@@ -87,7 +82,48 @@ gene_info <- getBM(attributes = attributes,
                    mart = ensembl)
 write.xlsx(as.data.frame(gene_info), "gene_descriptors.xlsx")
 
-#' Creates heatmap to visualize differentially expressed genes
+
+#' Graphs PCA with normalized and batch-removed data ===
+#' Note: DESeq2 vignette suggests using removeBatchEffect only for visualization
+#' since ~ batch + condition param in dds already fixes that issue
+vsd <- vst(dds, blind = FALSE)
+vsd_corrected <- removeBatchEffect(assay(vsd), batch = annotations$batch)
+pca <- prcomp(t(vsd_corrected))
+autoplot(pca, data = annotations, color = "condition", label = TRUE)
+
+
+#' Creates volcano plot as a sanity check after DESeq ===
+alpha <- 0.05 # Set threshold
+res$sig <- -log10(res$padj) # Compute significance, with a maximum of 320 
+                            # for the p-values set to 0 due to limitation of precision
+sum(is.infinite(res$sig))
+res[is.infinite(res$sig),"sig"] <- 320
+genes_to_plot <- !is.na(res$pvalue) # Select genes with a specific p-value
+# Visualization
+range(res[genes_to_plot, "log2FoldChange"])
+cols <- densCols(res$log2FoldChange, res$sig)
+cols[res$pvalue ==0] <- "purple"
+res$pch <- 19
+res$pch[res$pvalue ==0] <- 6
+plot(res$log2FoldChange, 
+     res$sig, 
+     col=cols, panel.first=grid(),
+     main="Volcano plot", 
+     xlab="Effect size: log2(fold-change)",
+     ylab="-log10(adjusted p-value)")
+abline(v=0)
+abline(v=c(-1,1), col="brown")
+abline(h=-log10(alpha), col="brown")
+
+#' Plot the names of a reasonable number of genes, by selecting those that are
+#' not only significant but also have a large effect size
+gn.selected <- abs(res$log2FoldChange) > 2 & res$padj < alpha 
+text(res$log2FoldChange[gn.selected],
+     -log10(res$padj)[gn.selected],
+     lab=rownames(res)[gn.selected ], cex=0.6)
+
+
+#' Creates heatmap to visualize differentially expressed genes ===
 #' Loads in the top 500 differentially expressed genes by padj for analyses
 #' File previously created by hand (extracting the top 500 after sorting by padj)
 t500 <- as.data.frame(read.xlsx("deseq_t500_procode.xlsx"))
