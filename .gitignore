@@ -2,6 +2,7 @@
 BAM_DIRECTORY/
 PROCODING_COUNT_MATRICES/
 archive/
+EH09/
 # Ignore file types
 *.csv
 *.xlsx
