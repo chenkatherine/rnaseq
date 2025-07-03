@@ -12,7 +12,7 @@ library(ggrepel)
 library(ggplot2)
 library(ggfortify)
 library(limma)
-library(RUVSeq)
+# library(RUVSeq)
 
 #' Set up project ===
 #' Creates vector with genes of interest for project specific analyses
@@ -57,6 +57,56 @@ annotations_sub <- annotations[, c("sample", "condition")]
             # k=1)
 
 # normalized_counts <- assayData(set)$normalizedCounts
+
+#' Normalizes raw protein coding gene counts and create box plot ===
+library(tidyverse)
+dds <- DESeqDataSetFromMatrix(countData = counts_matrix,
+                              colData = annotations,
+                              design = ~ batch + condition)
+# Raw count boxplot
+raw_counts_log <- log2(counts(dds, normalized = FALSE) + 1)
+raw_df <- as.data.frame(raw_counts_log) %>%
+  rownames_to_column("Gene") %>%
+  pivot_longer(-Gene, names_to = "Sample", values_to = "Log2Count") %>%
+  left_join(annotations %>% rownames_to_column("Sample"), by = "Sample") %>%
+  mutate(Type = "Raw")
+
+ggplot(raw_df, aes(x = reorder(Sample, condition), y = Log2Count, fill = condition)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  theme_minimal() +
+  facet_grid(. ~ condition, scales = "free_x", space = "free_x") +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold")
+  ) +
+  labs(title = "Raw Counts Grouped by Condition", y = "Log2(Normalized Count + 1)", x = "Sample")
+
+
+# Normalization
+dds_norm <- estimateSizeFactors(dds)
+deseq_normalized_counts <- counts(dds_norm, normalized=TRUE)
+# Normalized counts boxplot
+norm_counts_log <- log2(deseq_normalized_counts + 1)
+
+norm_df <- as.data.frame(norm_counts_log) %>%
+  rownames_to_column("Gene") %>%
+  pivot_longer(-Gene, names_to = "Sample", values_to = "Log2Count") %>%
+  left_join(annotations %>% rownames_to_column("Sample"), by = "Sample") %>%
+  mutate(Type = "Normalized")
+
+ggplot(norm_df, aes(x = reorder(Sample, condition), y = Log2Count, fill = condition)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  theme_minimal() +
+  facet_grid(. ~ condition, scales = "free_x", space = "free_x") +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold")
+  ) +
+  labs(title = "Normalized Counts Grouped by Condition", y = "Log2(Normalized Count + 1)", x = "Sample")
+
+
 
 #' Creates DESeqDataSet and runs DESeq2 ===
 #' Saves output to xlsx
