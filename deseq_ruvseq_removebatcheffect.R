@@ -30,7 +30,7 @@ genes_of_interest <- c("ENSG00000248098.12", # branched chain keto acid dehydrog
                       )
 
 #' Creates vector with housekeeping genes for RUVSeq
-housekeeping_genes <- c("ENSG00000248098.12", "ENSG00000112592.15") 
+#' housekeeping_genes <- c("ENSG00000248098.12", "ENSG00000112592.15") 
 # branched chain keto acid dehydrogenase E1, TATA-box binding protein
 
 #' Read in count matrix and annotations file.
@@ -167,11 +167,24 @@ abline(h=-log10(alpha), col="brown")
 
 #' Plot the names of a reasonable number of genes, by selecting those that are
 #' not only significant but also have a large effect size
-gn.selected <- abs(res$log2FoldChange) > 2 & res$padj < alpha 
+
+#' Hand selected a few points with enough separation from red lines
+gn.selected <- res$log2FoldChange > 4 & res$padj < alpha 
 text(res$log2FoldChange[gn.selected],
      -log10(res$padj)[gn.selected],
-     lab=rownames(res)[gn.selected ], cex=0.6)
+     lab=rownames(res)[gn.selected ], cex=0.6) # NKCC2
 
+gn.label <- res$log2FoldChange > 0 & -log10(res$padj) > 6
+text(res$log2FoldChange[gn.label],
+     -log10(res$padj)[gn.label],
+     labels = rownames(res)[gn.label],
+     cex = 0.6)
+
+gn.label1 <- res$log2FoldChange < -3 & -log10(res$padj) > 6.2
+text(res$log2FoldChange[gn.label1],
+     -log10(res$padj)[gn.label1],
+     labels = rownames(res)[gn.label1],
+     cex = 0.6)
 
 #' Creates heatmap to visualize differentially expressed genes ===
 #' Loads in the top 500 differentially expressed genes by padj for analyses
