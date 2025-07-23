@@ -16,9 +16,8 @@ library(limma)
 
 #' Set up project ===
 #' Creates vector with genes of interest for project specific analyses
-genes_of_interest <- c("ENSG00000248098.12", # branched chain keto acid dehydrogenase E1 
-                       "ENSG00000112592.15", # TATA-box binding protein
-                       "ENSG00000134852.15", #CLOCK
+genes_of_interest <- c(
+                        "ENSG00000134852.15", #CLOCK
                        "ENSG00000179094.16", #PER1
                        "ENSG00000132326.13", #PER2
                        "ENSG00000049246.15", #PER3
@@ -83,9 +82,11 @@ ggplot(raw_df, aes(x = reorder(Sample, condition), y = Log2Count, fill = conditi
   labs(title = "Raw Counts Grouped by Condition", y = "Log2(Normalized Count + 1)", x = "Sample")
 
 
-# Normalization
+# Normalization with save for GSEA
 dds_norm <- estimateSizeFactors(dds)
 deseq_normalized_counts <- counts(dds_norm, normalized=TRUE)
+write.xlsx(as.data.frame(deseq_normalized_counts), "normalized_counts.xlsx")
+
 # Normalized counts boxplot
 norm_counts_log <- log2(deseq_normalized_counts + 1)
 
