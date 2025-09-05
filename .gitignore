@@ -12,3 +12,5 @@ EH09/
 # Ignore files
 .DS_Store
 .Rhistory
+GSEA/
+IPA/
