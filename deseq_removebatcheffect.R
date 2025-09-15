@@ -111,12 +111,13 @@ ggplot(norm_df, aes(x = reorder(Sample, condition), y = Log2Count, fill = condit
 
 #' Creates DESeqDataSet and runs DESeq2 ===
 #' Saves output to xlsx
+annotations$condition <- relevel(factor(annotations$condition), ref="control")
 dds <- DESeqDataSetFromMatrix(countData = counts_matrix,
                               colData = annotations,
                               design = ~ batch + condition)
 dds <- DESeq(dds, minReplicatesForReplace = Inf)
 res <- results(dds, cooksCutoff = FALSE, independentFiltering = TRUE)
-# write.xlsx(as.data.frame(res), "file_name.xlsx")
+write.xlsx(as.data.frame(res), "pkd_vs_controls_deseq.xlsx")
 
 
 #' Employs biomaRt to retrieve gene symbols and descriptions from Ensembl ===
